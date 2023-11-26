@@ -1,17 +1,11 @@
-import { Foo } from "@/app/_components/Foo";
 import { Items } from "@/app/_components/Items";
 import { Profile } from "@/app/_components/Profile";
+import { getFollowsPosts } from "@/features/posts/follows";
 import Image from "next/image";
 import React, { Suspense } from "react";
-import { createPortal } from "react-dom";
-
-async function fetchItems() {
-  const res = await fetch("http://localhost:3080/posts/follows");
-  return res.json();
-}
 
 export default async function Home() {
-  const items = await fetchItems();
+  const posts = await getFollowsPosts();
 
   return (
     <>
@@ -288,7 +282,10 @@ export default async function Home() {
           </div>
         </div>
 
-        <Foo items={items} />
+        <Items
+          initialItems={posts}
+          initialLastId={posts[posts.length - 1].id}
+        />
       </main>
 
       {/* {isModalOpen &&

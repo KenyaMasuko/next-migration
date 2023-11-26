@@ -1,51 +1,46 @@
 "use client";
 
-import { useCallback, useRef, useEffect, useState } from "react";
+import { getFollowsPosts } from "@/features/posts/follows";
+import { useCallback, useRef, useEffect, useState, FC } from "react";
 
 type Item = {
+  id: number;
   userName: string;
 };
 
 type Props = {
   initialItems: Item[];
-  lastId: number;
+  initialLastId: number;
 };
 
-async function fetchItems(lastId: number) {
-  const res = await fetch(
-    `http://localhost:3080/posts/follows?lastId=${lastId}`
-  );
-  return res.json();
-}
-
-export function Items({ initialItems, lastId }: Props) {
-  console.log("initialItems", initialItems);
+export const Items: FC<Props> = ({ initialItems, initialLastId }) => {
   const observerTarget = useRef(null);
 
-  const [items, setItems] = useState([initialItems]);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(lastId);
+  const [items, setItems] = useState<Item[][]>([initialItems]);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [lastId, setLastId] = useState<number>(initialLastId);
 
   const flatItems = items.flatMap((id) => id);
 
-  const loadMore = useCallback(async (page: number) => {
-    const data = await fetchItems(page);
+  const loadMore = useCallback(async () => {
+    const data = await getFollowsPosts(lastId);
     setItems((prev) => [...prev, data]);
-    setPage(data[data.length - 1].id);
+    setLastId(data[data.length - 1].id);
 
     const count = data.length;
     setHasMore(count > 0);
-  }, []);
+  }, [lastId]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && hasMore) {
+            loadMore();
           }
         });
       },
-      { threshold: 1.0 }
+      { threshold: 1.0 },
     );
 
     let observerRefValue: null = null;
@@ -58,11 +53,7 @@ export function Items({ initialItems, lastId }: Props) {
     return () => {
       if (observerRefValue) observer.unobserve(observerRefValue);
     };
-  }, [hasMore, observerTarget]);
-
-  useEffect(() => {
-    if (page > 0) loadMore(page);
-  }, [page, loadMore]);
+  }, [observerTarget, hasMore, loadMore, lastId]);
 
   return (
     <div>
@@ -72,4 +63,4 @@ export function Items({ initialItems, lastId }: Props) {
       <div ref={observerTarget}>{hasMore && <div>Loading ...</div>}</div>
     </div>
   );
-}
+};
